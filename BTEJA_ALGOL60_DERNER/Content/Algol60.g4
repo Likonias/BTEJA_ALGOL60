@@ -80,7 +80,7 @@ expression
     : type                                          #constantExpression
     | IDENTIFIER                                    #identifierExpression
     | callExpression                                #procedureOrFunctionCallExpression
-    | LEFTPAREN expression RIGHTPAREN                      #parenthesizedExpression
+    | LEFTPAREN expression RIGHTPAREN               #parenthesizedExpression
     | expression MULTIPLYING_OPERATOR expression    #multiplicativeExpression
     | expression ADDING_OPERATOR expression         #additiveExpression
     | expression COMPARE_OPERATOR expression        #comparisonExpression
