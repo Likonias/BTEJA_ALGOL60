@@ -1,5 +1,7 @@
 ﻿begin
-    var x: integer;
+    int x;
     x := 7;
-    Write(x);
+    int c := 5/2;
+    write(c);
+    write(x);
 end;

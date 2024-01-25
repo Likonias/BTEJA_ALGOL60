@@ -9,12 +9,12 @@ IF: 'IF';
 THEN: 'THEN';
 ELSE: 'ELSE';
 RETURN: 'RETURN';
-GLOBAL: 'GLOBAL';
 PROCEDURE: 'PROCEDURE';
 FUNCTION: 'FUNCTION';
+WRITE: 'WRITE';
 INTEGER: [0-9]+;
-REAL: [0-9]+ '.' [0-9]+;
-BOOL: 'TRUE' | 'FALSE';
+DOUBLE: [0-9]+ '.' [0-9]+;
+BOOL: 'true' | 'false';
 ADDING_OPERATOR: '+' | '-';
 MULTIPLYING_OPERATOR: '*' | '/';
 COMPARE_OPERATOR: '==' | '!=' | '>' | '<' | '>=' | '<=';
@@ -38,15 +38,11 @@ blockHead: BEGIN;
 
 compoundTail: END;
 
-declaration: functionDeclaration | variableDeclaration | statement | ifBlock | whileBlock | typeDeclaration | arrayDeclaration;
+declaration: functionDeclaration | variableDeclaration | statement | ifBlock | whileBlock | arrayDeclaration;
 
-variableDeclaration: typeDeclaration IDENTIFIER (ASSIGN expression)? SEMICOLON;
+variableDeclaration: variableType IDENTIFIER (ASSIGN expression)? SEMICOLON;
 
-typeDeclaration: localOrGlobalType;
-
-localOrGlobalType: variableType | GLOBAL variableType;
-
-variableType: 'INTEGER' | 'REAL' | 'STRING';
+variableType: 'int' | 'double' | 'str' | 'bool';
 
 arrayDeclaration: variableType IDENTIFIER LEFTSQUAREBRACKET INTEGER RIGHTSQUAREBRACKET (ASSIGN arrayInitialization)? SEMICOLON;
 
@@ -74,7 +70,7 @@ parameter: variableType IDENTIFIER;
 
 returnStatement: RETURN expression SEMICOLON;
 
-type: INTEGER | REAL | STRING | BOOL;
+type: INTEGER | DOUBLE | STRING | BOOL;
 
 expression
     : type                                          #constantExpression
