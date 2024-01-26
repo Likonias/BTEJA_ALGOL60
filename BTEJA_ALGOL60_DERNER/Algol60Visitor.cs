@@ -163,7 +163,7 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
         return op switch
         {
             "*" => Multiply(left, right),
-            "/" => Devide(left, right),
+            "/" => Divide(left, right),
             _ => throw new Exception("Wrong operator!")
         };
     }
@@ -187,30 +187,141 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
         
     }
     
-    private object? Devide(object? left, object? right)
+    private object? Divide(object? left, object? right)
     {
 
         if (right is 0)
             throw new Exception("Can not devide by 0!");
         
         if (left is int leftInt && right is int rightInt)
-            return leftInt * rightInt;
+            return leftInt / rightInt;
         
         if (left is double leftDouble && right is double rightDouble)
-            return leftDouble * rightDouble;
+            return leftDouble / rightDouble;
         
         if (left is int lInt && right is double rDouble)
-            return lInt * rDouble;
+            return lInt / rDouble;
         
         if (left is int lDouble && right is int rInt)
-            return lDouble * rInt;
+            return lDouble / rInt;
         
-        throw new Exception($"Cannot devide with {left?.GetType()} and {right?.GetType()}");
+        throw new Exception($"Cannot divided with {left?.GetType()} and {right?.GetType()}");
         
+    }
+
+    public override object? VisitArrayDeclaration(Algol60Parser.ArrayDeclarationContext context)
+    {
+        
+        var arrName = context.IDENTIFIER().GetText();
+        var size = int.Parse(context.INTEGER().GetText());
+        var arrayType = context.variableType().GetText();
+
+        var array = new object?[size];
+
+        Variables[arrName] = array;
+
+        if (context.arrayInitialization() is { } initializationContext)
+        {
+            var initializationValues = initializationContext.expression();
+
+            for (int i = 0; i < initializationValues.Length; i++)
+            {
+                var value = Visit(initializationValues[i]);
+
+                if (!IsCorrectType(arrayType, value))
+                {
+                    throw new Exception($"Incorrect data type - cannot assign {value} to {arrayType}");
+                }
+
+                if (i < size)
+                {
+                    array[i] = value;
+                }
+                else
+                {
+                    throw new Exception($"Array size {arrName} exceeded");
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public override object? VisitArrayAccess(Algol60Parser.ArrayAccessContext context)
+    {
+        
+        var arrName = context.IDENTIFIER().GetText();
+        var index = (int)(Visit(context.expression()) ?? throw new Exception("Wrong index!"));
+
+        if (!Variables.ContainsKey(arrName))
+            throw new Exception($"Array doesnt exist: {arrName}");
+
+        var array = (object?[])Variables[arrName]!;
+
+        return array[index];
+        
+    }
+    
+    public override object? VisitFunctionDeclaration(Algol60Parser.FunctionDeclarationContext context)
+    {
+        var funcName = context.IDENTIFIER().GetText();
+        var parameters = context.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
+        var returnType = context.type().GetText();
+
+        Variables[funcName] = context;
+
+        return null;
+    }
+
+    public override object? VisitCallExpression(Algol60Parser.CallExpressionContext context)
+    {
+        var funcName = context.IDENTIFIER().GetText();
+        var args = context.expression().Select(Visit).ToArray();
+
+        if (Variables.TryGetValue(funcName, out var funcObj) && funcObj is Func<object?[], object?> func)
+        {
+            return func(args);
+        }
+        else if (Variables.TryGetValue(funcName, out var funcContextObj) && funcContextObj is Algol60Parser.FunctionDeclarationContext funcContext)
+        {
+            var parameters = funcContext.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
+            if (parameters.Count != args.Length)
+                throw new Exception($"Incorrect number of arguments for function: {funcName}");
+
+            var localVariables = new Dictionary<string, object?>();
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                localVariables[parameters[i]] = args[i];
+            }
+
+            var previousVariables = new Dictionary<string, object?>(Variables);
+            Variables = localVariables;
+            var returnValue = Visit(funcContext.block());
+            Variables = previousVariables;
+
+            if (Variables.TryGetValue("_returnValue", out var returnValueFromBlock))
+            {
+                Variables.Remove("_returnValue");
+                return returnValueFromBlock;
+            }
+
+            return returnValue;
+        }
+        else
+        {
+            throw new Exception($"Function with name {funcName} is not declared");
+        }
+    }
+
+    public override object? VisitReturnStatement(Algol60Parser.ReturnStatementContext context)
+    {
+        Variables["_returnValue"] = Visit(context.expression());
+        return Variables["_returnValue"];
     }
 
     private object? Write(object?[] args)
     {
+        
         foreach (var arg in args)
         {
             Console.WriteLine(arg);

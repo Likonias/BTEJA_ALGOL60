@@ -62,7 +62,7 @@ assignment: IDENTIFIER ASSIGN expression;
 
 callExpression: IDENTIFIER LEFTPAREN (expression (COMMA expression)*)? RIGHTPAREN;
 
-functionDeclaration: FUNCTION IDENTIFIER LEFTPAREN parameterList? RIGHTPAREN RETURNS type block;
+functionDeclaration: FUNCTION IDENTIFIER LEFTPAREN parameterList? RIGHTPAREN RETURN type block;
 
 parameterList: parameter (COMMA parameter)*;
 
