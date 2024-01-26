@@ -12,7 +12,7 @@ RETURN: 'RETURN';
 PROCEDURE: 'PROCEDURE';
 FUNCTION: 'FUNCTION';
 WRITE: 'WRITE';
-INTEGER: [0-9]+;
+INT: [0-9]+;
 DOUBLE: [0-9]+ '.' [0-9]+;
 BOOL: 'true' | 'false';
 ADDING_OPERATOR: '+' | '-';
@@ -26,7 +26,7 @@ LEFTSQUAREBRACKET: '[';
 RIGHTSQUAREBRACKET: ']';
 ASSIGN: ':=';
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
-STRING: ('"' ~'"'* '"') | ('\'' ~'\''* '\'');
+STR: ('"' ~'"'* '"') | ('\'' ~'\''* '\'');
 WHITESPACE: [ \t\r\n]+ -> skip;
 COMMENT: '(*' .*? '*)' -> skip;
 
@@ -38,13 +38,13 @@ blockHead: BEGIN;
 
 compoundTail: END;
 
-declaration: functionDeclaration | variableDeclaration | statement | ifBlock | whileBlock | arrayDeclaration;
+declaration: procedureDeclaration | functionDeclaration | variableDeclaration | statement | ifBlock | whileBlock | arrayDeclaration;
 
 variableDeclaration: variableType IDENTIFIER (ASSIGN expression)? SEMICOLON;
 
-variableType: 'int' | 'double' | 'str' | 'bool';
+variableType: 'INT' | 'DOUBLE' | 'STR' | 'BOOL';
 
-arrayDeclaration: variableType IDENTIFIER LEFTSQUAREBRACKET INTEGER RIGHTSQUAREBRACKET (ASSIGN arrayInitialization)? SEMICOLON;
+arrayDeclaration: variableType IDENTIFIER LEFTSQUAREBRACKET INT RIGHTSQUAREBRACKET (ASSIGN arrayInitialization)? SEMICOLON;
 
 arrayInitialization: LEFTSQUAREBRACKET expression (COMMA expression)* RIGHTSQUAREBRACKET;
 
@@ -64,13 +64,15 @@ callExpression: IDENTIFIER LEFTPAREN (expression (COMMA expression)*)? RIGHTPARE
 
 functionDeclaration: FUNCTION IDENTIFIER LEFTPAREN parameterList? RIGHTPAREN RETURN type block;
 
+procedureDeclaration: PROCEDURE IDENTIFIER LEFTPAREN parameterList? RIGHTPAREN block;
+
 parameterList: parameter (COMMA parameter)*;
 
 parameter: variableType IDENTIFIER;
 
 returnStatement: RETURN expression SEMICOLON;
 
-type: INTEGER | DOUBLE | STRING | BOOL;
+type: INT | DOUBLE | STR | BOOL;
 
 expression
     : type                                          #constantExpression

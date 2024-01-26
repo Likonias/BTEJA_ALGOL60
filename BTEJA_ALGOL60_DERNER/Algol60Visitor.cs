@@ -29,13 +29,13 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
     public override object? VisitType(Algol60Parser.TypeContext context)
     {
 
-        if (context.INTEGER() is {} i)
+        if (context.INT() is {} i)
             return int.Parse(i.GetText());
 
         if (context.DOUBLE() is { } r)
             return double.Parse(r.GetText());
 
-        if (context.STRING() is { } s)
+        if (context.STR() is { } s)
             return s.GetText()[1..^1];
 
         if (context.BOOL() is { } b)
@@ -48,13 +48,13 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
     {
         switch (type)
         {
-            case "int":
+            case "INT":
                 return value is int;
-            case "double":
-                return value is float;
-            case "str":
+            case "DOUBLE":
+                return value is double;
+            case "STR":
                 return value is string;
-            case "bool":
+            case "BOOL":
                 return value is bool;
             default:
                 throw new Exception($"Unsopported type {type}");
@@ -209,11 +209,148 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
         
     }
 
+    public override object? VisitWhileBlock(Algol60Parser.WhileBlockContext context)
+    {
+        var conditionValue = Visit(context.expression());
+
+        if (IsTrue(conditionValue))
+        {
+            do
+            {
+                Visit(context.block());
+                conditionValue = Visit(context.expression());
+            } while (IsTrue(conditionValue));
+        }
+
+        return null;
+    }
+    
+    private bool IsTrue(object? value)
+    {
+        if (value is bool b)
+            return b;
+        throw new Exception($"Is not a bool {value}");
+    }
+    
+    public override object? VisitComparisonExpression(Algol60Parser.ComparisonExpressionContext context)
+    {
+        var left = Visit(context.expression(0));
+        var right = Visit(context.expression(1));
+
+        var op = context.COMPARE_OPERATOR().GetText();
+
+        return op switch
+        {
+            "<" => LessThan(left, right),
+            "<=" => LessThanEquals(left, right),
+            ">" => GreaterThan(left, right),
+            ">=" => GreaterThanEquals(left, right),
+            "==" => EqualsEquals(left, right),
+            "!=" => NotEquals(left, right),
+            _ => throw new Exception($"Unsupported comparison operator: {op}")
+        };
+    }
+    
+    private bool LessThan(object? left, object? right)
+    {
+        
+        if (left is int leftInt && right is int rightInt)
+            return leftInt < rightInt;
+        
+        if (left is double leftDouble && right is double rightDouble)
+            return leftDouble < rightDouble;
+        
+        if (left is int lInt && right is double rDouble)
+            return lInt < rDouble;
+        
+        if (left is int lDouble && right is int rInt)
+            return lDouble < rInt;
+        
+        throw new Exception("Unsupported less than comparison");
+    }
+
+    private bool LessThanEquals(object? left, object? right)
+    {
+        if (left is int leftInt && right is int rightInt)
+            return leftInt <= rightInt;
+        
+        if (left is double leftDouble && right is double rightDouble)
+            return leftDouble <= rightDouble;
+        
+        if (left is int lInt && right is double rDouble)
+            return lInt <= rDouble;
+        
+        if (left is int lDouble && right is int rInt)
+            return lDouble <= rInt;
+
+        throw new Exception("Unsupported less than or equals comparison");
+    }
+
+    private bool GreaterThan(object? left, object? right)
+    {
+        if (left is int leftInt && right is int rightInt)
+            return leftInt > rightInt;
+        
+        if (left is double leftDouble && right is double rightDouble)
+            return leftDouble > rightDouble;
+        
+        if (left is int lInt && right is double rDouble)
+            return lInt > rDouble;
+        
+        if (left is int lDouble && right is int rInt)
+            return lDouble > rInt;
+
+        throw new Exception("Unsupported greater than comparison");
+    }
+
+    private bool GreaterThanEquals(object? left, object? right)
+    {
+        if (left is int leftInt && right is int rightInt)
+            return leftInt >= rightInt;
+        
+        if (left is double leftDouble && right is double rightDouble)
+            return leftDouble >= rightDouble;
+        
+        if (left is int lInt && right is double rDouble)
+            return lInt >= rDouble;
+        
+        if (left is int lDouble && right is int rInt)
+            return lDouble >= rInt;
+
+        throw new Exception("Unsupported greater than or equals comparison");
+    }
+
+    private bool EqualsEquals(object? left, object? right)
+    {
+        return Equals(left, right);
+    }
+
+    private bool NotEquals(object? left, object? right)
+    {
+        return !Equals(left, right);
+    }
+    
+    public override object? VisitIfBlock(Algol60Parser.IfBlockContext context)
+    {
+        var conditionValue = Visit(context.expression());
+    
+        if (IsTrue(conditionValue))
+        {
+            Visit(context.block());
+        }
+        else if (context.elseIfBlock() != null)
+        {
+            Visit(context.elseIfBlock());
+        }
+
+        return null;
+    }
+    
     public override object? VisitArrayDeclaration(Algol60Parser.ArrayDeclarationContext context)
     {
         
         var arrName = context.IDENTIFIER().GetText();
-        var size = int.Parse(context.INTEGER().GetText());
+        var size = int.Parse(context.INT().GetText());
         var arrayType = context.variableType().GetText();
 
         var array = new object?[size];
@@ -266,27 +403,37 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
     {
         var funcName = context.IDENTIFIER().GetText();
         var parameters = context.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
-        var returnType = context.type().GetText();
+        var returnType = context.type();
 
         Variables[funcName] = context;
 
         return null;
     }
 
+    public override object? VisitProcedureDeclaration(Algol60Parser.ProcedureDeclarationContext context)
+    {
+        var procName = context.IDENTIFIER().GetText();
+        var parameters = context.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
+        
+        Variables[procName] = context;
+
+        return null;
+    }
+
     public override object? VisitCallExpression(Algol60Parser.CallExpressionContext context)
     {
-        var funcName = context.IDENTIFIER().GetText();
+        var callName = context.IDENTIFIER().GetText();
         var args = context.expression().Select(Visit).ToArray();
 
-        if (Variables.TryGetValue(funcName, out var funcObj) && funcObj is Func<object?[], object?> func)
+        if (Variables.TryGetValue(callName, out var funcObj) && funcObj is Func<object?[], object?> func)
         {
             return func(args);
         }
-        else if (Variables.TryGetValue(funcName, out var funcContextObj) && funcContextObj is Algol60Parser.FunctionDeclarationContext funcContext)
+        else if (Variables.TryGetValue(callName, out var funcContextObj) && funcContextObj is Algol60Parser.FunctionDeclarationContext funcContext)
         {
             var parameters = funcContext.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
             if (parameters.Count != args.Length)
-                throw new Exception($"Incorrect number of arguments for function: {funcName}");
+                throw new Exception($"Incorrect number of arguments for function: {callName}");
 
             var localVariables = new Dictionary<string, object?>();
             for (int i = 0; i < parameters.Count; i++)
@@ -296,23 +443,39 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
 
             var previousVariables = new Dictionary<string, object?>(Variables);
             Variables = localVariables;
-            var returnValue = Visit(funcContext.block());
+            Visit(funcContext.block());
+            object? returnValue = Variables.GetValueOrDefault("_returnValue");
             Variables = previousVariables;
 
-            if (Variables.TryGetValue("_returnValue", out var returnValueFromBlock))
+            return returnValue;
+            
+        }else if (Variables.TryGetValue(callName, out var procContextObj) && funcContextObj is Algol60Parser.ProcedureDeclarationContext procContext)
+        {
+            
+            var parameters = procContext.parameterList()?.parameter().Select(p => p.IDENTIFIER().GetText()).ToList() ?? new List<string>();
+            if (parameters.Count != args.Length)
+                throw new Exception($"Incorrect number of arguments for procedure: {callName}");
+
+            var localVariables = new Dictionary<string, object?>();
+            for (int i = 0; i < parameters.Count; i++)
             {
-                Variables.Remove("_returnValue");
-                return returnValueFromBlock;
+                localVariables[parameters[i]] = args[i];
             }
 
+            var previousVariables = new Dictionary<string, object?>(Variables);
+            Variables = localVariables;
+            Visit(procContext.block());
+            object? returnValue = Variables.GetValueOrDefault("_returnValue");
+            Variables = previousVariables;
+
             return returnValue;
+            
         }
         else
         {
-            throw new Exception($"Function with name {funcName} is not declared");
+            throw new Exception($"Function or procedure with name {callName} is not declared");
         }
     }
-
     public override object? VisitReturnStatement(Algol60Parser.ReturnStatementContext context)
     {
         Variables["_returnValue"] = Visit(context.expression());
