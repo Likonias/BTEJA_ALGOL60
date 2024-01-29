@@ -348,12 +348,25 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
     
     public override object? VisitArrayDeclaration(Algol60Parser.ArrayDeclarationContext context)
     {
-        
         var arrName = context.IDENTIFIER().GetText();
-        var size = int.Parse(context.INT().GetText());
+        int size1 = int.Parse(context.INT(0).GetText());
+        int size2;
         var arrayType = context.variableType().GetText();
 
-        var array = new object?[size];
+        object?[,] array;
+
+        if (context.INT().Length == 1)
+        {
+            // One-dimensional array
+            size2 = 1;
+            array = new object?[size1, size2];
+        }
+        else
+        {
+            // Two-dimensional array
+            size2 = int.Parse(context.INT(1).GetText());
+            array = new object?[size1, size2];
+        }
 
         Variables[arrName] = array;
 
@@ -361,43 +374,65 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
         {
             var initializationValues = initializationContext.expression();
 
-            for (int i = 0; i < initializationValues.Length; i++)
+            for (int j = 0; j < array.GetLength(1); j++)
             {
-                var value = Visit(initializationValues[i]);
+                for (int i = 0; i < array.GetLength(0); i++)
+                {
+                    var index = i + j * array.GetLength(0);
 
-                if (!IsCorrectType(arrayType, value))
-                {
-                    throw new Exception($"Incorrect data type - cannot assign {value} to {arrayType}");
-                }
+                    if (index < initializationValues.Length)
+                    {
+                        var value = Visit(initializationValues[index]);
 
-                if (i < size)
-                {
-                    array[i] = value;
-                }
-                else
-                {
-                    throw new Exception($"Array size {arrName} exceeded");
+                        if (!IsCorrectType(arrayType, value))
+                        {
+                            throw new Exception($"Incorrect data type - cannot assign {value} to {arrayType}");
+                        }
+
+                        array[i, j] = value;
+                    }
+                    else
+                    {
+                        if(index > (size1 * size2))
+                            throw new Exception($"Array size {arrName} exceeded");
+                    }
                 }
             }
         }
 
         return null;
     }
-
+    
     public override object? VisitArrayAccess(Algol60Parser.ArrayAccessContext context)
     {
-        
         var arrName = context.IDENTIFIER().GetText();
-        var index = (int)(Visit(context.expression()) ?? throw new Exception("Wrong index!"));
-
+        var index1 = (int)(Visit(context.expression(0)) ?? throw new Exception("Wrong index!"));
+    
         if (!Variables.ContainsKey(arrName))
-            throw new Exception($"Array doesnt exist: {arrName}");
+            throw new Exception($"Array doesn't exist: {arrName}");
 
-        var array = (object?[])Variables[arrName]!;
+        var array = (object?[,])Variables[arrName]!;
 
-        return array[index];
-        
+        if (context.expression().Length == 1)
+        {
+            // One-dimensional array access
+            if (index1 < 0 || index1 >= array.GetLength(0))
+                throw new Exception($"Array index out of bounds for {arrName}");
+
+            return array[index1, 0];
+        }
+        else
+        {
+            // Two-dimensional array access
+            var index2 = (int)(Visit(context.expression(1)) ?? throw new Exception("Wrong index!"));
+
+            if (index1 < 0 || index1 >= array.GetLength(0) || index2 < 0 || index2 >= array.GetLength(1))
+                throw new Exception($"Array index out of bounds for {arrName}");
+
+            return array[index1, index2];
+        }
     }
+
     
     public override object? VisitFunctionDeclaration(Algol60Parser.FunctionDeclarationContext context)
     {
