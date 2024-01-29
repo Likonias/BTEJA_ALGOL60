@@ -415,7 +415,7 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
 
         if (context.expression().Length == 1)
         {
-            // One-dimensional array access
+            
             if (index1 < 0 || index1 >= array.GetLength(0))
                 throw new Exception($"Array index out of bounds for {arrName}");
 
@@ -423,12 +423,15 @@ public class Algol60Visitor: Algol60BaseVisitor<object?>
         }
         else
         {
-            // Two-dimensional array access
+            
             var index2 = (int)(Visit(context.expression(1)) ?? throw new Exception("Wrong index!"));
 
             if (index1 < 0 || index1 >= array.GetLength(0) || index2 < 0 || index2 >= array.GetLength(1))
                 throw new Exception($"Array index out of bounds for {arrName}");
 
+            if(array[index1, index2] == null)
+                throw new Exception($"Array value not initialized {arrName}");
+            
             return array[index1, index2];
         }
     }
