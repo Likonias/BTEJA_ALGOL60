@@ -7,8 +7,10 @@ public class Class1
 {
     static void Main()
     {
-        var fileName = "Content\\test.ss";
-
+        //var fileName = "Content\\priklad1.ss";
+        var fileName = "Content\\priklad2.ss";
+        //var fileName = "Content\\priklad3.ss";
+        
         var fileContents = File.ReadAllText(fileName);
         
         var inputStream = new AntlrInputStream(fileContents);
